@@ -24,6 +24,17 @@ public class SimplePlayerMove : MonoBehaviour
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
 
+        // Si no hay input de teclado, usamos touch (para móvil / WebGL en cel)
+        if (Mathf.Approximately(h, 0f) && Mathf.Approximately(v, 0f) && Input.touchCount > 0)
+        {
+            Touch t = Input.GetTouch(0);
+            Vector2 center = new Vector2(Screen.width / 2f, Screen.height / 2f);
+            Vector2 dirTouch = (t.position - center).normalized;
+
+            // Si el dedo está hacia la derecha/izquierda/arriba/abajo del centro, movemos en esa dirección
+            h = Mathf.Abs(dirTouch.x) > 0.2f ? Mathf.Sign(dirTouch.x) : 0f;
+            v = Mathf.Abs(dirTouch.y) > 0.2f ? Mathf.Sign(dirTouch.y) : 0f;
+}
         // Dirección en plano XZ
         Vector3 dir = new Vector3(h, 0f, v);
 
