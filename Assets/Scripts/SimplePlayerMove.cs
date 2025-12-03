@@ -17,15 +17,14 @@ public class SimplePlayerMove : MonoBehaviour
     private CharacterController controller;
     private Animator animator;
 
-    private bool isWalking = false;
-    private bool isSliding = false;
-    private bool isJumping = false;
-
     private float verticalVelocity = 0f;
     private bool onIce = false;
     private Vector3 slideDir = Vector3.zero;
 
     private bool jumpRequested = false;
+
+    private bool isWalking = false;
+    private bool isSliding = false;
 
     private void Awake()
     {
@@ -38,10 +37,10 @@ public class SimplePlayerMove : MonoBehaviour
         }
     }
 
-    // Llamado por el botón de salto (JumpButton → OnClick → Player.SimplePlayerMove.OnJumpButton)
+    // Llamado por el botón Jump (UI)
     public void OnJumpButton()
     {
-        // Solo registramos la intención de saltar
+        // Solo marcamos la intención de saltar, se aplica en Update cuando esté en el suelo
         jumpRequested = true;
     }
 
@@ -64,10 +63,10 @@ public class SimplePlayerMove : MonoBehaviour
     {
         if (controller == null) return;
 
-        // === 1) GROUND CHECK GENERAL ===
+        // === 1) Ground general ===
         bool grounded = CheckGrounded();
 
-        // === 2) DETECTAR HIELO SOLO CUANDO ESTAMOS EN EL SUELO ===
+        // === 2) Detectar hielo solo cuando estamos en el suelo ===
         onIce = false;
         if (grounded)
         {
@@ -79,7 +78,7 @@ public class SimplePlayerMove : MonoBehaviour
             }
         }
 
-        // === 3) INPUT: JOYSTICK PRIMERO, TECLADO COMO BACKUP ===
+        // === 3) INPUT: joystick primero, teclado de backup ===
         float h = 0f;
         float v = 0f;
 
@@ -91,7 +90,7 @@ public class SimplePlayerMove : MonoBehaviour
         }
         else
         {
-            // en editor/PC
+            // en PC / editor
             h = Input.GetAxisRaw("Horizontal");
             v = Input.GetAxisRaw("Vertical");
         }
@@ -102,7 +101,7 @@ public class SimplePlayerMove : MonoBehaviour
 
         bool hasInput = inputDir.sqrMagnitude > 0.001f;
 
-        // === 4) ROTACIÓN (solo si hay input horizontal) ===
+        // === 4) Rotación (solo si hay input horizontal) ===
         if (hasInput)
         {
             Quaternion targetRot = Quaternion.LookRotation(inputDir);
@@ -113,39 +112,35 @@ public class SimplePlayerMove : MonoBehaviour
             );
         }
 
-        // === 5) SALTO + GRAVEDAD ===
+        // === 5) Salto + gravedad (física, sin anim especial) ===
         if (grounded)
         {
-            // Mantenerlo pegado al suelo
+            // manténlo pegado al suelo
             if (verticalVelocity < 0f)
                 verticalVelocity = -1f;
 
-            // Si se pidió salto, aplicarlo aunque esté idle
+            // aplica salto aunque esté idle
             if (jumpRequested)
             {
                 verticalVelocity = jumpForce;
                 jumpRequested = false;
-                isJumping = true;
-
-                if (animator != null)
-                    animator.Play("Jump");
             }
         }
         else
         {
-            // En el aire no seguimos acumulando "requests" de salto
+            // en el aire, no acumules más saltos
             jumpRequested = false;
         }
 
-        // Aplicar gravedad siempre
+        // gravedad siempre
         verticalVelocity += gravity * Time.deltaTime;
 
         Vector3 move;
 
-        // === 6) MOVIMIENTO: HIELO VS NORMAL ===
-        if (onIce && !isJumping) // solo modo hielo cuando ESTÁ en el suelo, no volando
+        // === 6) Movimiento: hielo vs normal ===
+        if (onIce)
         {
-            // Modo hielo: inercia
+            // modo hielo: inercia solo cuando está en el suelo
             if (hasInput)
             {
                 slideDir = inputDir;
@@ -160,31 +155,17 @@ public class SimplePlayerMove : MonoBehaviour
         }
         else
         {
-            // Normal o en el aire
+            // modo normal
             Vector3 horizontal = inputDir * moveSpeed;
             move = new Vector3(horizontal.x, verticalVelocity, horizontal.z);
-            if (!onIce)
-                slideDir = Vector3.zero;
+            slideDir = Vector3.zero;
         }
 
-        // === 7) MOVER AL PERSONAJE ===
+        // === 7) Mover al personaje ===
         controller.Move(move * Time.deltaTime);
 
-        // Re-chequeo de grounded después del movimiento (para cerrar el salto bien)
-        bool groundedAfterMove = CheckGrounded();
-
-        // === 8) LÓGICA DE FIN DE SALTO ===
-        if (isJumping)
-        {
-            // si ya tocó suelo y está cayendo o quieto en Y, terminamos el salto
-            if (groundedAfterMove && verticalVelocity <= 0f)
-            {
-                isJumping = false;
-            }
-        }
-
-        // === 9) ANIMACIONES: NO PISAR JUMP MIENTRAS DURA ===
-        if (animator != null && !isJumping)
+        // === 8) Animaciones: Idle / Walk / Slide (sin Jump) ===
+        if (animator != null)
         {
             bool isMovingHoriz = onIce ? (slideDir.sqrMagnitude > 0.001f) : hasInput;
 
@@ -210,12 +191,11 @@ public class SimplePlayerMove : MonoBehaviour
             }
             else
             {
-                // SIN movimiento horizontal → SIEMPRE forzamos Idle
+                // Quieto => Idle siempre
                 animator.Play("Idle");
                 isWalking = false;
                 isSliding = false;
             }
         }
-
     }
 }
