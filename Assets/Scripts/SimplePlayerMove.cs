@@ -13,6 +13,7 @@ public class SimplePlayerMove : MonoBehaviour
 
     [Header("Mobile Controls")]
     public VirtualJoystick joystick;  // asignar en el inspector
+    public bool allowMovement = true;
 
     private CharacterController controller;
     private Animator animator;
@@ -62,7 +63,8 @@ public class SimplePlayerMove : MonoBehaviour
     private void Update()
     {
         if (controller == null) return;
-
+        if (!allowMovement)
+            return;
         // === 1) Ground general ===
         bool grounded = CheckGrounded();
 
